@@ -2,6 +2,8 @@
 
 A mobile-first, web-based Game Master/Narrator for **The Resistance: Avalon**. It uses your device's native text-to-speech to orchestrate the night phases, allowing everyone to participate. No apps, no installations required.
 
+**Live Demo:** [https://avalon-announcer.netlify.app/](https://avalon-announcer.netlify.app/)
+
 ## ✨ Features
 
 - **Automated Scripting**: Dynamically generates the night script and padding roles (Minions/Loyal Servants) based on your player count.
