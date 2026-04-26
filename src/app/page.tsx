@@ -111,8 +111,8 @@ export default function Home() {
     }
 
     // Segment 1 & 2
-    const evilAwakeCount = maxEvil - (has('Oberon') ? 1 : 0);
-    const evilAwakeText = isVerbose ? ` You should see ${evilAwakeCount} players with their eyes open.` : "";
+    const evilAwakeCount = Math.max(0, maxEvil - (has('Oberon') ? 1 : 0) - 1);
+    const evilAwakeText = isVerbose ? ` You should see ${evilAwakeCount} other ${evilAwakeCount === 1 ? 'player' : 'players'} with their eyes open.` : "";
 
     if (has('Oberon')) {
       segments.push({text: "AGENTS OF EVIL, except OBERON, wake up, and look for other agents of Evil." + evilAwakeText, pause: defaultPause});
