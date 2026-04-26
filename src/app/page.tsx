@@ -243,7 +243,7 @@ export default function Home() {
             
             {[...Array(Math.max(0, {
               5: 3, 6: 4, 7: 4, 8: 5, 9: 6, 10: 6
-            }[players as keyof typeof players]! - (has('Merlin') ? 1 : 0) - (has('Percival') ? 1 : 0)))].map((_, i) => (
+            }[players as 5|6|7|8|9|10]! - (has('Merlin') ? 1 : 0) - (has('Percival') ? 1 : 0)))].map((_, i) => (
               <div
                 key={`loyal-${i}`}
                 style={{
@@ -295,7 +295,7 @@ export default function Home() {
 
             {[...Array(Math.max(0, {
               5: 2, 6: 2, 7: 3, 8: 3, 9: 3, 10: 4
-            }[players as keyof typeof players]! - (has('Assassin') ? 1 : 0) - (has('Morgana') ? 1 : 0) - (has('Mordred') ? 1 : 0) - (has('Oberon') ? 1 : 0)))].map((_, i) => (
+            }[players as 5|6|7|8|9|10]! - (has('Assassin') ? 1 : 0) - (has('Morgana') ? 1 : 0) - (has('Mordred') ? 1 : 0) - (has('Oberon') ? 1 : 0)))].map((_, i) => (
               <div
                 key={`minion-${i}`}
                 style={{
