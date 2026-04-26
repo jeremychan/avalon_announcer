@@ -14,6 +14,9 @@ export default function Home() {
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoiceURI, setSelectedVoiceURI] = useState<string>("");
   const [pauseSeconds, setPauseSeconds] = useState(5);
+  const [isVerbose, setIsVerbose] = useState(false);
+  const [showRoster, setShowRoster] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
 
   const stopRequested = useRef(false);
 
@@ -39,9 +42,24 @@ export default function Home() {
       window.speechSynthesis.onvoiceschanged = loadVoices;
     }
   }, [selectedVoiceURI]);
+  useEffect(() => {
+    const maxEvil = ({ 5: 2, 6: 2, 7: 3, 8: 3, 9: 3, 10: 4 } as Record<number, number>)[players] || 0;
+    const maxGood = players - maxEvil;
+
+    const evalEvil = ['Assassin', 'Morgana', 'Mordred', 'Oberon'].filter(c => selectedChars.has(c as Character)).length;
+    const evalGood = ['Merlin', 'Percival'].filter(c => selectedChars.has(c as Character)).length;
+
+    if (evalEvil > maxEvil || evalGood > maxGood) {
+      setSelectedChars(new Set(['Merlin', 'Assassin']));
+    }
+  }, [players, selectedChars]);
 
   const toggleChar = (char: Character) => {
     const newChars = new Set(selectedChars);
+    
+    const maxEvil = ({ 5: 2, 6: 2, 7: 3, 8: 3, 9: 3, 10: 4 } as Record<number, number>)[players] || 0;
+    const maxGood = players - maxEvil;
+
     if (newChars.has(char)) {
       newChars.delete(char);
       // Auto-deselect linked characters based on rules
@@ -66,6 +84,14 @@ export default function Home() {
         newChars.add('Merlin');
         newChars.add('Assassin');
       }
+
+      const evalEvil = ['Assassin', 'Morgana', 'Mordred', 'Oberon'].filter(c => newChars.has(c as Character)).length;
+      const evalGood = ['Merlin', 'Percival'].filter(c => newChars.has(c as Character)).length;
+
+      if (evalEvil > maxEvil || evalGood > maxGood) {
+        alert(`Cannot add ${char}. This player count strictly supports ${maxGood} Good and ${maxEvil} Evil special roles maximum.`);
+        return;
+      }
     }
     setSelectedChars(newChars);
   };
@@ -75,39 +101,49 @@ export default function Home() {
   const buildScript = () => {
     const segments: {text: string, pause: number}[] = [];
     const defaultPause = pauseSeconds * 1000;
+    const maxEvil = ({ 5: 2, 6: 2, 7: 3, 8: 3, 9: 3, 10: 4 } as Record<number, number>)[players] || 0;
 
     // Segment 0
     if (has('Merlin')) {
-      segments.push({text: "EVERYONE, close your eyes, and extend your hand into a fist in front of you.", pause: 2000});
+      segments.push({text: "EVERYONE, close your eyes, and extend your hand into a fist in front of you.", pause: defaultPause});
     } else {
-      segments.push({text: "EVERYONE, close your eyes.", pause: 2000});
+      segments.push({text: "EVERYONE, close your eyes.", pause: defaultPause});
     }
 
     // Segment 1 & 2
+    const evilAwakeCount = maxEvil - (has('Oberon') ? 1 : 0);
+    const evilAwakeText = isVerbose ? ` You should see ${evilAwakeCount} players with their eyes open.` : "";
+
     if (has('Oberon')) {
-      segments.push({text: "AGENTS OF EVIL, except OBERON, wake up, and look for other agents of Evil.", pause: defaultPause});
+      segments.push({text: "AGENTS OF EVIL, except OBERON, wake up, and look for other agents of Evil." + evilAwakeText, pause: defaultPause});
     } else {
-      segments.push({text: "AGENTS OF EVIL, wake up, and look for other agents of Evil.", pause: defaultPause});
+      segments.push({text: "AGENTS OF EVIL, wake up, and look for other agents of Evil." + evilAwakeText, pause: defaultPause});
     }
-    segments.push({text: "AGENTS OF EVIL, close your eyes.", pause: 2000});
+    segments.push({text: "AGENTS OF EVIL, close your eyes.", pause: defaultPause});
 
     // Segment 3 & 4
     if (has('Merlin')) {
+      const evilThumbCount = maxEvil - (has('Mordred') ? 1 : 0);
+      const evilThumbText = isVerbose ? ` You should see ${evilThumbCount} ${evilThumbCount === 1 ? 'thumb' : 'thumbs'}.` : "";
+
       if (has('Mordred')) {
-        segments.push({text: "MERLIN, wake up. AGENTS OF EVIL, except MORDRED, stick out your thumb, so that Merlin can see who you are.", pause: defaultPause});
+        segments.push({text: "MERLIN, wake up. AGENTS OF EVIL, except MORDRED, stick out your thumb, so that Merlin can see who you are." + evilThumbText, pause: defaultPause});
       } else {
-        segments.push({text: "MERLIN, wake up. AGENTS OF EVIL, stick out your thumb, so that Merlin can see who you are.", pause: defaultPause});
+        segments.push({text: "MERLIN, wake up. AGENTS OF EVIL, stick out your thumb, so that Merlin can see who you are." + evilThumbText, pause: defaultPause});
       }
-      segments.push({text: "AGENTS OF EVIL, put your thumbs away. MERLIN, close your eyes.", pause: 2000});
+      segments.push({text: "AGENTS OF EVIL, put your thumbs away. MERLIN, close your eyes.", pause: defaultPause});
 
       // Segment 5 & 6
       if (has('Percival')) {
+        const percivalThumbCount = (has('Merlin') ? 1 : 0) + (has('Morgana') ? 1 : 0);
+        const percivalThumbText = isVerbose ? ` You should see ${percivalThumbCount} ${percivalThumbCount === 1 ? 'thumb' : 'thumbs'}.` : "";
+
         if (has('Morgana')) {
-          segments.push({text: "PERCIVAL, wake up. MERLIN and MORGANA, stick out your thumb, so that Percival can see who you are.", pause: defaultPause});
-          segments.push({text: "MERLIN and MORGANA, put your thumbs away. PERCIVAL, close your eyes.", pause: 2000});
+          segments.push({text: "PERCIVAL, wake up. MERLIN and MORGANA, stick out your thumb, so that Percival can see who you are." + percivalThumbText, pause: defaultPause});
+          segments.push({text: "MERLIN and MORGANA, put your thumbs away. PERCIVAL, close your eyes.", pause: defaultPause});
         } else {
-          segments.push({text: "PERCIVAL, wake up. MERLIN, stick out your thumb, so that Percival can see who you are.", pause: defaultPause});
-          segments.push({text: "MERLIN, put your thumb away. PERCIVAL, close your eyes.", pause: 2000});
+          segments.push({text: "PERCIVAL, wake up. MERLIN, stick out your thumb, so that Percival can see who you are." + percivalThumbText, pause: defaultPause});
+          segments.push({text: "MERLIN, put your thumb away. PERCIVAL, close your eyes.", pause: defaultPause});
         }
         segments.push({text: "EVERYONE, wake up.", pause: 0});
       } else {
@@ -212,149 +248,185 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="glass-panel animate-fade-in" style={{ padding: '24px', marginBottom: '32px', animationDelay: '0.2s' }}>
-        <h2 style={{ marginBottom: '16px', fontSize: '1.25rem', textAlign: 'center' }}>Game Roster</h2>
-
-        {/* Good Characters */}
-        <div style={{ marginBottom: '24px', padding: '16px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-          <h3 style={{ fontSize: '1.1rem', color: 'var(--good-primary)', marginBottom: '12px', textAlign: 'center' }}>Forces of Good</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
-            {(['Merlin', 'Percival'] as Character[]).map(char => {
-              const selected = has(char);
-              return (
-                <button
-                  key={char}
-                  onClick={() => toggleChar(char)}
-                  style={{
-                    padding: '12px',
-                    borderRadius: '12px',
-                    border: `2px solid ${selected ? 'var(--good-primary)' : 'rgba(255,255,255,0.1)'}`,
-                    background: selected ? 'rgba(59, 130, 246, 0.1)' : 'rgba(255,255,255,0.05)',
-                    color: selected ? 'white' : 'var(--text-secondary)',
-                    cursor: 'pointer',
-                    fontWeight: selected ? 600 : 400,
-                    transition: 'var(--transition)'
-                  }}
-                >
-                  {char}
-                </button>
-              )
-            })}
-            
-            {[...Array(Math.max(0, {
-              5: 3, 6: 4, 7: 4, 8: 5, 9: 6, 10: 6
-            }[players as 5|6|7|8|9|10]! - (has('Merlin') ? 1 : 0) - (has('Percival') ? 1 : 0)))].map((_, i) => (
-              <div
-                key={`loyal-${i}`}
+      <div className="glass-panel animate-fade-in" style={{ padding: '24px', marginBottom: '24px', animationDelay: '0.15s' }}>
+        <h2 style={{ marginBottom: '16px', fontSize: '1.25rem' }}>Special Roles</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
+          {(['Merlin', 'Percival', 'Assassin', 'Morgana', 'Mordred', 'Oberon'] as Character[]).map(char => {
+            const selected = has(char);
+            const isGood = char === 'Merlin' || char === 'Percival';
+            return (
+              <button
+                key={char}
+                onClick={() => toggleChar(char)}
                 style={{
                   padding: '12px',
                   borderRadius: '12px',
-                  border: `2px dashed rgba(59, 130, 246, 0.5)`,
-                  background: 'rgba(59, 130, 246, 0.05)',
-                  color: 'white',
-                  fontWeight: 600,
-                  textAlign: 'center',
-                  opacity: 0.8,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '0.875rem'
+                  border: `2px solid ${selected ? (isGood ? 'var(--good-primary)' : 'var(--evil-primary)') : 'rgba(255,255,255,0.1)'}`,
+                  background: selected ? (isGood ? 'rgba(59, 130, 246, 0.1)' : 'rgba(239, 68, 68, 0.1)') : 'rgba(255,255,255,0.05)',
+                  color: selected ? 'white' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  fontWeight: selected ? 600 : 400,
+                  transition: 'var(--transition)'
                 }}
               >
-                Loyal Servant
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Evil Characters */}
-        <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-          <h3 style={{ fontSize: '1.1rem', color: 'var(--evil-primary)', marginBottom: '12px', textAlign: 'center' }}>Minions of Mordred</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
-            {(['Assassin', 'Morgana', 'Mordred', 'Oberon'] as Character[]).map(char => {
-              const selected = has(char);
-              return (
-                <button
-                  key={char}
-                  onClick={() => toggleChar(char)}
-                  style={{
-                    padding: '12px',
-                    borderRadius: '12px',
-                    border: `2px solid ${selected ? 'var(--evil-primary)' : 'rgba(255,255,255,0.1)'}`,
-                    background: selected ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.05)',
-                    color: selected ? 'white' : 'var(--text-secondary)',
-                    cursor: 'pointer',
-                    fontWeight: selected ? 600 : 400,
-                    transition: 'var(--transition)'
-                  }}
-                >
-                  {char}
-                </button>
-              )
-            })}
-
-            {[...Array(Math.max(0, {
-              5: 2, 6: 2, 7: 3, 8: 3, 9: 3, 10: 4
-            }[players as 5|6|7|8|9|10]! - (has('Assassin') ? 1 : 0) - (has('Morgana') ? 1 : 0) - (has('Mordred') ? 1 : 0) - (has('Oberon') ? 1 : 0)))].map((_, i) => (
-              <div
-                key={`minion-${i}`}
-                style={{
-                  padding: '12px',
-                  borderRadius: '12px',
-                  border: `2px dashed rgba(239, 68, 68, 0.5)`,
-                  background: 'rgba(239, 68, 68, 0.05)',
-                  color: 'white',
-                  fontWeight: 600,
-                  textAlign: 'center',
-                  opacity: 0.8,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '0.875rem'
-                }}
-              >
-                Minion
-              </div>
-            ))}
-          </div>
+                {char}
+              </button>
+            )
+          })}
         </div>
       </div>
 
-      <div className="glass-panel animate-fade-in" style={{ padding: '24px', marginBottom: '24px', animationDelay: '0.25s' }}>
-        <h2 style={{ marginBottom: '16px', fontSize: '1.25rem' }}>Narrator Tone</h2>
-        <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
-          <div style={{ flex: '1 1 100%' }}>
-            <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '8px', color: 'var(--text-secondary)' }}>Voice Actor</label>
-            <select
-              value={selectedVoiceURI}
-              onChange={(e) => setSelectedVoiceURI(e.target.value)}
-              style={{
-                 width: '100%',
-                 padding: '12px',
-                 borderRadius: '12px',
-                 background: 'rgba(255,255,255,0.05)',
-                 border: '1px solid rgba(255,255,255,0.1)',
-                 color: 'var(--text-primary)',
-                 fontSize: '1rem',
-                 outline: 'none',
-                 cursor: 'pointer'
-              }}
-            >
-              {availableVoices.map(voice => (
-                 <option key={voice.voiceURI} value={voice.voiceURI} style={{ color: 'black' }}>
-                    {voice.name} ({voice.lang})
-                 </option>
-              ))}
-            </select>
-          </div>
-          <div style={{ flex: '1 1 100%', marginTop: '8px' }}>
-            <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '8px', color: 'var(--text-secondary)' }}>Pause Duration: {pauseSeconds}s</label>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button onClick={() => setPauseSeconds(Math.max(1, pauseSeconds - 1))} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.05)', color: 'white', cursor: 'pointer', flex: 1, fontSize: '1.25rem' }}>-</button>
-              <button onClick={() => setPauseSeconds(Math.min(10, pauseSeconds + 1))} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.05)', color: 'white', cursor: 'pointer', flex: 1, fontSize: '1.25rem' }}>+</button>
+      <div className="glass-panel animate-fade-in" style={{ padding: '24px', marginBottom: '32px', animationDelay: '0.2s' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setShowRoster(!showRoster)}>
+          <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Game Roster</h2>
+          <span style={{ fontSize: '1.5rem', color: 'var(--text-secondary)' }}>{showRoster ? '−' : '+'}</span>
+        </div>
+
+        {showRoster && (
+          <div style={{ marginTop: '24px' }}>
+            {/* Good Characters */}
+            <div style={{ marginBottom: '24px', padding: '16px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+              <h3 style={{ fontSize: '1.1rem', color: 'var(--good-primary)', marginBottom: '12px', textAlign: 'center' }}>Forces of Good</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
+                {(['Merlin', 'Percival'] as Character[]).filter(char => has(char)).map(char => (
+                  <div
+                    key={char}
+                    style={{
+                      padding: '12px',
+                      borderRadius: '12px',
+                      border: `2px solid var(--good-primary)`,
+                      background: 'rgba(59, 130, 246, 0.1)',
+                      color: 'white',
+                      fontWeight: 600,
+                      textAlign: 'center'
+                    }}
+                  >
+                    {char}
+                  </div>
+                ))}
+                
+                {[...Array(Math.max(0, {
+                  5: 3, 6: 4, 7: 4, 8: 5, 9: 6, 10: 6
+                }[players as 5|6|7|8|9|10]! - (has('Merlin') ? 1 : 0) - (has('Percival') ? 1 : 0)))].map((_, i) => (
+                  <div
+                    key={`loyal-${i}`}
+                    style={{
+                      padding: '12px',
+                      borderRadius: '12px',
+                      border: `2px dashed rgba(59, 130, 246, 0.5)`,
+                      background: 'rgba(59, 130, 246, 0.05)',
+                      color: 'white',
+                      fontWeight: 600,
+                      textAlign: 'center',
+                      opacity: 0.8,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.875rem'
+                    }}
+                  >
+                    Loyal Servant
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Evil Characters */}
+            <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+              <h3 style={{ fontSize: '1.1rem', color: 'var(--evil-primary)', marginBottom: '12px', textAlign: 'center' }}>Minions of Mordred</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
+                {(['Assassin', 'Morgana', 'Mordred', 'Oberon'] as Character[]).filter(char => has(char)).map(char => (
+                  <div
+                    key={char}
+                    style={{
+                      padding: '12px',
+                      borderRadius: '12px',
+                      border: `2px solid var(--evil-primary)`,
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      color: 'white',
+                      fontWeight: 600,
+                      textAlign: 'center'
+                    }}
+                  >
+                    {char}
+                  </div>
+                ))}
+
+                {[...Array(Math.max(0, {
+                  5: 2, 6: 2, 7: 3, 8: 3, 9: 3, 10: 4
+                }[players as 5|6|7|8|9|10]! - (has('Assassin') ? 1 : 0) - (has('Morgana') ? 1 : 0) - (has('Mordred') ? 1 : 0) - (has('Oberon') ? 1 : 0)))].map((_, i) => (
+                  <div
+                    key={`minion-${i}`}
+                    style={{
+                      padding: '12px',
+                      borderRadius: '12px',
+                      border: `2px dashed rgba(239, 68, 68, 0.5)`,
+                      background: 'rgba(239, 68, 68, 0.05)',
+                      color: 'white',
+                      fontWeight: 600,
+                      textAlign: 'center',
+                      opacity: 0.8,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.875rem'
+                    }}
+                  >
+                    Minion
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
+        )}
+      </div>
+
+      <div className="glass-panel animate-fade-in" style={{ padding: '24px', marginBottom: '24px', animationDelay: '0.25s' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setShowOptions(!showOptions)}>
+          <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Narrator Options</h2>
+          <span style={{ fontSize: '1.5rem', color: 'var(--text-secondary)' }}>{showOptions ? '−' : '+'}</span>
         </div>
+        
+        {showOptions && (
+          <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', marginTop: '24px' }}>
+            <div style={{ flex: '1 1 100%' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '8px', color: 'var(--text-secondary)' }}>Voice Actor</label>
+              <select
+                value={selectedVoiceURI}
+                onChange={(e) => setSelectedVoiceURI(e.target.value)}
+                style={{
+                   width: '100%',
+                   padding: '12px',
+                   borderRadius: '12px',
+                   background: 'rgba(255,255,255,0.05)',
+                   border: '1px solid rgba(255,255,255,0.1)',
+                   color: 'var(--text-primary)',
+                   fontSize: '1rem',
+                   outline: 'none',
+                   cursor: 'pointer'
+                }}
+              >
+                {availableVoices.map(voice => (
+                   <option key={voice.voiceURI} value={voice.voiceURI} style={{ color: 'black' }}>
+                      {voice.name} ({voice.lang})
+                   </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ flex: '1 1 100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.05)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <label style={{ fontSize: '1rem', color: 'var(--text-primary)', cursor: 'pointer', margin: 0, fontWeight: 500 }} htmlFor="verboseToggle">Verbose Narration (Counts)</label>
+              <input id="verboseToggle" type="checkbox" checked={isVerbose} onChange={(e) => setIsVerbose(e.target.checked)} style={{ width: '20px', height: '20px', accentColor: 'var(--accent-primary)', cursor: 'pointer' }} />
+            </div>
+            <div style={{ flex: '1 1 100%', marginTop: '8px' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '8px', color: 'var(--text-secondary)' }}>Pause Duration: {pauseSeconds}s</label>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button onClick={() => setPauseSeconds(Math.max(1, pauseSeconds - 1))} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.05)', color: 'white', cursor: 'pointer', flex: 1, fontSize: '1.25rem' }}>-</button>
+                <button onClick={() => setPauseSeconds(Math.min(10, pauseSeconds + 1))} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.05)', color: 'white', cursor: 'pointer', flex: 1, fontSize: '1.25rem' }}>+</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="animate-fade-in" style={{ textAlign: 'center', animationDelay: '0.3s', marginBottom: '32px' }}>
